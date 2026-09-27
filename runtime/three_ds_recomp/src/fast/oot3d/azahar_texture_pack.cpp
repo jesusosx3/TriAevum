@@ -582,6 +582,11 @@ class AzaharTexturePackRuntime::Impl {
         }
     }
 
+    void RegisterHashAlias(uint64_t replacementHash, uint64_t originalHash) {
+        std::scoped_lock lock(mMutex);
+        mHashAliases.insert_or_assign(replacementHash, originalHash);
+    }
+
     std::shared_ptr<const AzaharTextureReplacement> ResolveAndMaybeDump(const AzaharTextureRequest& request) {
         bool dumpEnabled = false;
         bool loadEnabled = false;
@@ -644,15 +649,28 @@ class AzaharTexturePackRuntime::Impl {
         }
 
         IndexedTexture indexed;
+        uint64_t resolvedLoadHash = *loadHash;
         {
             std::scoped_lock lock(mMutex);
             if (generation != mGeneration) {
                 return nullptr;
             }
-            if (const auto cached = mReplacementCache.find(*loadHash); cached != mReplacementCache.end()) {
+            if (const auto cached = mReplacementCache.find(resolvedLoadHash); cached != mReplacementCache.end()) {
                 return cached->second;
             }
-            const auto found = mIndex.find(*loadHash);
+            auto found = mIndex.find(resolvedLoadHash);
+            if (found == mIndex.end()) {
+                if (const auto alias = mHashAliases.find(resolvedLoadHash); alias != mHashAliases.end()) {
+                    if (const auto cached = mReplacementCache.find(alias->second); cached != mReplacementCache.end()) {
+                        mReplacementCache.try_emplace(resolvedLoadHash, cached->second);
+                        return cached->second;
+                    }
+                    found = mIndex.find(alias->second);
+                    if (found != mIndex.end()) {
+                        resolvedLoadHash = alias->second;
+                    }
+                }
+            }
             if (found == mIndex.end()) {
                 return nullptr;
             }
@@ -660,12 +678,15 @@ class AzaharTexturePackRuntime::Impl {
         }
 
         try {
-            const auto replacement = DecodeReplacement(indexed, *loadHash);
+            const auto replacement = DecodeReplacement(indexed, resolvedLoadHash);
             std::scoped_lock lock(mMutex);
             if (generation != mGeneration || !mConfiguration.LoadCustomTextures) {
                 return nullptr;
             }
             const auto [entry, inserted] = mReplacementCache.try_emplace(*loadHash, replacement);
+            if (resolvedLoadHash != *loadHash) {
+                mReplacementCache.try_emplace(resolvedLoadHash, replacement);
+            }
             return entry->second;
         } catch (const std::exception& exception) {
             SetError(exception.what());
@@ -758,7 +779,21 @@ class AzaharTexturePackRuntime::Impl {
                 AzaharTextureResolveState::Ready,
                 *loadHash, cached->second};
         }
-        const auto indexed = mIndex.find(*loadHash);
+        auto indexed = mIndex.find(*loadHash);
+        if (indexed == mIndex.end()) {
+            if (const auto alias = mHashAliases.find(*loadHash); alias != mHashAliases.end()) {
+                if (const auto cached = mReplacementCache.find(alias->second); cached != mReplacementCache.end()) {
+                    mReplacementCache.try_emplace(*loadHash, cached->second);
+                    return {
+                        AzaharTextureResolveState::Ready,
+                        *loadHash, cached->second};
+                }
+                const auto aliasFound = mIndex.find(alias->second);
+                if (aliasFound != mIndex.end()) {
+                    indexed = aliasFound;
+                }
+            }
+        }
         if (indexed == mIndex.end()) {
             return {
                 AzaharTextureResolveState::Missing,
@@ -804,6 +839,13 @@ class AzaharTexturePackRuntime::Impl {
             return {
                 AzaharTextureResolveState::Ready,
                 nativeHash, cached->second};
+        }
+        if (const auto alias = mHashAliases.find(nativeHash); alias != mHashAliases.end()) {
+            if (const auto cached = mReplacementCache.find(alias->second); cached != mReplacementCache.end()) {
+                return {
+                    AzaharTextureResolveState::Ready,
+                    nativeHash, cached->second};
+            }
         }
         if (mFailedLoadHashes.contains(nativeHash)) {
             return {
@@ -1045,6 +1087,7 @@ class AzaharTexturePackRuntime::Impl {
     std::filesystem::path mDumpDirectory;
     PackState mPack;
     bool mDumpUsesNewHash = true;
+    std::unordered_map<uint64_t, uint64_t> mHashAliases;
     std::unordered_map<uint64_t, IndexedTexture> mIndex;
     std::unordered_map<uint64_t, std::shared_ptr<const AzaharTextureReplacement>> mReplacementCache;
     std::unordered_map<uint64_t, uint64_t> mPendingLoadGenerations;
@@ -1075,6 +1118,10 @@ void AzaharTexturePackRuntime::Configure(AzaharTexturePackConfiguration configur
 
 void AzaharTexturePackRuntime::Reload() {
     mImpl->Reload();
+}
+
+void AzaharTexturePackRuntime::RegisterHashAlias(uint64_t replacementHash, uint64_t originalHash) {
+    mImpl->RegisterHashAlias(replacementHash, originalHash);
 }
 
 std::shared_ptr<const AzaharTextureReplacement>

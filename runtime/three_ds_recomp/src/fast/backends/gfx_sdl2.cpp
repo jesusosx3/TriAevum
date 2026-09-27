@@ -40,6 +40,9 @@
 #else
 #include <SDL2/SDL.h>
 #define GL_GLEXT_PROTOTYPES 1
+#ifndef SDL_USE_BUILTIN_OPENGL_DEFINITIONS
+#define SDL_USE_BUILTIN_OPENGL_DEFINITIONS 1
+#endif
 #include <SDL2/SDL_opengles2.h>
 #endif
 

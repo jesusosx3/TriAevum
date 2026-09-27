@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -25,6 +26,11 @@ struct TopScreenProfileTextureAsset {
   std::vector<std::uint8_t> EncodedPayload;
 };
 
+struct TopScreenTextureOverrideEntryView {
+  std::uint64_t OriginalHash = 0;
+  std::uint64_t ReplacementHash = 0;
+};
+
 class TopScreenTextureOverridePack {
  public:
   bool Load(const std::filesystem::path &path, std::string *error = nullptr);
@@ -37,6 +43,9 @@ class TopScreenTextureOverridePack {
       std::uint32_t payloadSize, std::string *error = nullptr) const;
   const TopScreenProfileTextureAsset *FindProfileTexture(
       std::string_view semanticName) const noexcept;
+  [[nodiscard]] std::optional<std::uint64_t> FindOriginalHash(
+      std::uint64_t replacementHash) const noexcept;
+  [[nodiscard]] std::vector<TopScreenTextureOverrideEntryView> EntryViews() const;
   bool Empty() const noexcept;
 
  private:

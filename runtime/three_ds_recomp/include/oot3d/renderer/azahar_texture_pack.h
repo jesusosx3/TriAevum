@@ -92,10 +92,9 @@ class AzaharTexturePackRuntime final {
 
     static AzaharTexturePackRuntime& Instance();
 
-    // Reconfiguration and reload invalidate only this module's decoded cache.
-    // Generation lets a backend invalidate its own texture identity lazily.
     void Configure(AzaharTexturePackConfiguration configuration);
     void Reload();
+    void RegisterHashAlias(uint64_t replacementHash, uint64_t originalHash);
 
     [[nodiscard]] std::shared_ptr<const AzaharTextureReplacement>
     ResolveAndMaybeDump(const AzaharTextureRequest& request);

@@ -4941,13 +4941,16 @@ VkSurfaceFormatKHR GfxRenderingAPIVulkan::ChooseSurfaceFormat(
 VkPresentModeKHR GfxRenderingAPIVulkan::ChoosePresentMode(
     const std::vector<VkPresentModeKHR>& modes) const {
     if (mVsyncEnabled) {
+        if (std::find(modes.begin(), modes.end(), VK_PRESENT_MODE_MAILBOX_KHR) != modes.end()) {
+            return VK_PRESENT_MODE_MAILBOX_KHR;
+        }
         return VK_PRESENT_MODE_FIFO_KHR;
-    }
-    if (std::find(modes.begin(), modes.end(), VK_PRESENT_MODE_IMMEDIATE_KHR) != modes.end()) {
-        return VK_PRESENT_MODE_IMMEDIATE_KHR;
     }
     if (std::find(modes.begin(), modes.end(), VK_PRESENT_MODE_MAILBOX_KHR) != modes.end()) {
         return VK_PRESENT_MODE_MAILBOX_KHR;
+    }
+    if (std::find(modes.begin(), modes.end(), VK_PRESENT_MODE_IMMEDIATE_KHR) != modes.end()) {
+        return VK_PRESENT_MODE_IMMEDIATE_KHR;
     }
     return VK_PRESENT_MODE_FIFO_KHR;
 }

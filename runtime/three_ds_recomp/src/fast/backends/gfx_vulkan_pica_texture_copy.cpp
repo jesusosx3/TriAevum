@@ -75,15 +75,20 @@ bool GfxRenderingAPIVulkan::SubmitNativePicaTextureCopy(
                 source = &target;
             }
         }
-        if (!source) throw std::runtime_error("raw PICA copy has no coherent GPU source");
-        // Writing an existing attachment needs an upload as well as guest-memory
-        // writeback. Never claim completion for that not-yet-supported case.
-        for (const auto& [key, target] : mNativePicaRenderTargets) {
+        // If the copy destination aliases an existing attachment, destroy and evict
+        // the stale GPU attachment instead of aborting the copy and deadlocking interrupts.
+        for (auto it = mNativePicaRenderTargets.begin(); it != mNativePicaRenderTargets.end();) {
+            const auto& key = it->first;
+            auto& target = it->second;
             const uint32_t bpp = key.ColorFormat == 0 ? 4 : key.ColorFormat == 1 ? 3 : 2;
             const uint64_t end = uint64_t{key.ColorPhysicalAddress} + uint64_t{key.Width} * key.Height * bpp;
             if (key.RenderTargetNamespace == transfer.RenderTargetNamespace &&
-                key.ColorPhysicalAddress < outputEnd && end > transfer.OutputPhysicalAddress)
-                throw std::runtime_error("raw PICA copy destination aliases an active GPU attachment");
+                key.ColorPhysicalAddress < outputEnd && end > transfer.OutputPhysicalAddress) {
+                DestroyNativePicaRenderTarget(target);
+                it = mNativePicaRenderTargets.erase(it);
+            } else {
+                ++it;
+            }
         }
         EndNativePicaRenderPass();
         if (mRenderPassActive) {
@@ -91,21 +96,24 @@ bool GfxRenderingAPIVulkan::SubmitNativePicaTextureCopy(
             mRenderPassActive = false;
             mOverlayRenderPassActive = false;
         }
-        // A rare raw transfer is a GPU/CPU coherence boundary. Submit the exact
-        // recorded prefix, not the whole frame or an unrelated presentation.
-        WaitForAllPresents();
-        const VkCommandBuffer command = mCommandBuffers[mCurrentFrame];
-        RequireCopyVk(vkEndCommandBuffer(command), "end raw-copy prefix");
-        VkSubmitInfo submit{VK_STRUCTURE_TYPE_SUBMIT_INFO};
-        submit.commandBufferCount = 1;
-        submit.pCommandBuffers = &command;
-        RequireCopyVk(vkQueueSubmit(mGraphicsQueue, 1, &submit, VK_NULL_HANDLE), "submit raw-copy prefix");
-        RequireCopyVk(vkQueueWaitIdle(mGraphicsQueue), "wait raw-copy prefix");
-        const auto rgba = CaptureNativePicaImageBytes(source->ColorImage, source->Width, source->Height, 4,
-            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-            VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
-        const auto native = Renderer3ds::EncodePicaFramebuffer(rgba, source->Width, source->Height,
-            source->Key.Width, source->Key.Height, source->Key.ColorFormat);
+        std::vector<uint8_t> native;
+        if (source != nullptr) {
+            // A rare raw transfer is a GPU/CPU coherence boundary. Submit the exact
+            // recorded prefix, not the whole frame or an unrelated presentation.
+            WaitForAllPresents();
+            const VkCommandBuffer command = mCommandBuffers[mCurrentFrame];
+            RequireCopyVk(vkEndCommandBuffer(command), "end raw-copy prefix");
+            VkSubmitInfo submit{VK_STRUCTURE_TYPE_SUBMIT_INFO};
+            submit.commandBufferCount = 1;
+            submit.pCommandBuffers = &command;
+            RequireCopyVk(vkQueueSubmit(mGraphicsQueue, 1, &submit, VK_NULL_HANDLE), "submit raw-copy prefix");
+            RequireCopyVk(vkQueueWaitIdle(mGraphicsQueue), "wait raw-copy prefix");
+            const auto rgba = CaptureNativePicaImageBytes(source->ColorImage, source->Width, source->Height, 4,
+                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+            native = Renderer3ds::EncodePicaFramebuffer(rgba, source->Width, source->Height,
+                source->Key.Width, source->Key.Height, source->Key.ColorFormat);
+        }
         // The prefix fence has retired every prior use. A framebuffer copy
         // changes each frame; retaining all its content-hash texture versions
         // would grow both GPU memory and savestates without bound.
@@ -127,12 +135,15 @@ bool GfxRenderingAPIVulkan::SubmitNativePicaTextureCopy(
                 it = mNativePicaTextures.erase(it);
             } else ++it;
         }
-        RequireCopyVk(vkResetCommandBuffer(command, 0), "reset raw-copy continuation");
-        VkCommandBufferBeginInfo begin{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-        begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        RequireCopyVk(vkBeginCommandBuffer(command, &begin), "begin raw-copy continuation");
-        if (mNriInterop.Available() && !mNriInterop.WrapFrameCommandBuffer(mCurrentFrame, command))
-            throw std::runtime_error("cannot wrap raw-copy continuation in NRI");
+        if (source != nullptr) {
+            const VkCommandBuffer command = mCommandBuffers[mCurrentFrame];
+            RequireCopyVk(vkResetCommandBuffer(command, 0), "reset raw-copy continuation");
+            VkCommandBufferBeginInfo begin{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+            begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+            RequireCopyVk(vkBeginCommandBuffer(command, &begin), "begin raw-copy continuation");
+            if (mNriInterop.Available() && !mNriInterop.WrapFrameCommandBuffer(mCurrentFrame, command))
+                throw std::runtime_error("cannot wrap raw-copy continuation in NRI");
+        }
 
         RawTextureCopyWriteback writeback;
         writeback.CompletionId = transfer.CompletionId;
@@ -146,8 +157,14 @@ bool GfxRenderingAPIVulkan::SubmitNativePicaTextureCopy(
             write.Before.resize(count);
             if (!mPhysicalMemoryRead(write.Address, write.Before))
                 throw std::runtime_error("raw PICA copy destination is unmapped");
-            const size_t offset = static_cast<size_t>(input - source->Key.ColorPhysicalAddress);
-            write.Bytes.assign(native.begin() + offset, native.begin() + offset + count);
+            if (source != nullptr) {
+                const size_t offset = static_cast<size_t>(input - source->Key.ColorPhysicalAddress);
+                write.Bytes.assign(native.begin() + offset, native.begin() + offset + count);
+            } else {
+                write.Bytes.resize(count);
+                if (!mPhysicalMemoryRead(static_cast<uint32_t>(input), write.Bytes))
+                    throw std::runtime_error("raw PICA copy source memory is unmapped");
+            }
             writeback.Writes.push_back(std::move(write));
             left -= count; inputLeft -= count; outputLeft -= count;
             input += count; output += count;

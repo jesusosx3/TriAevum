@@ -213,4 +213,25 @@ TopScreenTextureOverridePack::FindProfileTexture(
   return found != mProfileTextures.end() ? &*found : nullptr;
 }
 
+std::optional<std::uint64_t>
+TopScreenTextureOverridePack::FindOriginalHash(
+    std::uint64_t replacementHash) const noexcept {
+  for (const auto &entry : mEntries) {
+    if (entry.ReplacementHash == replacementHash) {
+      return entry.OriginalHash;
+    }
+  }
+  return std::nullopt;
+}
+
+std::vector<TopScreenTextureOverrideEntryView>
+TopScreenTextureOverridePack::EntryViews() const {
+  std::vector<TopScreenTextureOverrideEntryView> views;
+  views.reserve(mEntries.size());
+  for (const auto &entry : mEntries) {
+    views.push_back({entry.OriginalHash, entry.ReplacementHash});
+  }
+  return views;
+}
+
 } // namespace Oot3dNativeGame

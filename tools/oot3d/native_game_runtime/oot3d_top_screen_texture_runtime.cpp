@@ -57,28 +57,39 @@ void TopScreenTextureOverrideRuntime::Observe(
 void TopScreenTextureOverrideRuntime::Transform(
     const Oot3dPicaTextureState& texture,
     std::span<std::uint8_t> payload) {
-    const auto target = mTargets.find(texture.PhysicalAddress);
-    if (target == mTargets.end() || target->second.byte_count != payload.size()) {
+    auto target = mTargets.find(texture.PhysicalAddress);
+    if (target != mTargets.end() && target->second.byte_count != payload.size()) {
         return;
     }
-    auto& targetStats = target->second;
-    targetStats.last_width = texture.Width;
-    targetStats.last_height = texture.Height;
-    targetStats.last_format = texture.Format;
-    targetStats.last_payload_hash = Fnv1a64(payload);
-    ++targetStats.payload_checks;
+    TopScreenTextureOverrideTargetStats* targetStats = nullptr;
+    if (target != mTargets.end()) {
+        targetStats = &target->second;
+    } else {
+        auto [insertedIt, inserted] = mTargets.try_emplace(texture.PhysicalAddress);
+        if (inserted) {
+            insertedIt->second.physical_address = texture.PhysicalAddress;
+            insertedIt->second.guest_surface_address = texture.PhysicalAddress;
+            insertedIt->second.byte_count = payload.size();
+        }
+        targetStats = &insertedIt->second;
+    }
+    targetStats->last_width = texture.Width;
+    targetStats->last_height = texture.Height;
+    targetStats->last_format = texture.Format;
+    targetStats->last_payload_hash = Fnv1a64(payload);
+    ++targetStats->payload_checks;
     ++mStats.payload_checks;
     switch (mPack.Apply(payload)) {
     case TopScreenTextureOverrideResult::Applied:
-        ++targetStats.applied;
+        ++targetStats->applied;
         ++mStats.applied;
         break;
     case TopScreenTextureOverrideResult::AlreadyApplied:
-        ++targetStats.already_applied;
+        ++targetStats->already_applied;
         ++mStats.already_applied;
         break;
     case TopScreenTextureOverrideResult::NoMatch:
-        ++targetStats.no_match;
+        ++targetStats->no_match;
         ++mStats.no_match;
         break;
     }

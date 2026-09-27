@@ -84,6 +84,7 @@
 #include "fast/oot3d/perspective_fov_policy.h"
 #include "fast/oot3d/presentation_pacing_policy.h"
 #include "fast/oot3d/title_render_backend.h"
+#include "oot3d/renderer/azahar_texture_pack.h"
 #include "ship/Context.h"
 #include "ship/audio/Audio.h"
 #include "ship/audio/AudioPlayer.h"
@@ -3108,6 +3109,10 @@ void RunOot3dNativeA32Window(const Oot3dNativeGameLaunch &launch) {
                                error);
     }
     topScreenTextureOverridePackPointer = &topScreenTextureOverridePack;
+    for (const auto &entry : topScreenTextureOverridePack.EntryViews()) {
+      ::Oot3d::Renderer::AzaharTexturePackRuntime::Instance().RegisterHashAlias(
+          entry.ReplacementHash, entry.OriginalHash);
+    }
 #if defined(__SWITCH__)
     gSwitchTopScreen211Assets =
         topScreenTextureOverridePack.FindProfileTexture(
@@ -5310,6 +5315,16 @@ void RunOot3dNativeA32Window(const Oot3dNativeGameLaunch &launch) {
               "native VBlank could not enter the GSP relay queue");
         }
         ++vblankCount;
+      }
+      if (!pendingTextureCopyCompletions.empty()) {
+        if (auto work = picaPresentationScheduler.TakeDependencyWork()) {
+          Oot3dNativeGame::Oot3dPicaVisualFrameViewSample sample;
+          (void)Oot3dNativeGame::ViewOot3dPicaVisualFrame(*work, sample);
+          if (!picaPresentationScheduler.Execute(api, sample, kVisualInterpolationRenderTargetNamespace,
+                  Oot3dNativeGame::Oot3dPicaPresentationExecutionKind::DependencyFlush, false, &error)) {
+            throw std::runtime_error("native PICA dependency flush failed: " + error);
+          }
+        }
       }
       if (presentHostFrame) {
         CpuProbe::Scope cpuVisual(CpuProbe::Phase::VisualPresentation);
