@@ -2,6 +2,7 @@
 
 #include "oot3d/renderer/azahar_texture_pack.h"
 #include <imgui.h>
+#include <nlohmann/json.hpp>
 
 #include <algorithm>
 #include <array>
@@ -15,6 +16,31 @@ namespace Fast::Oot3d {
 
 namespace detail {
 
+inline std::vector<std::filesystem::path> GetDataRoots() {
+    std::vector<std::filesystem::path> roots;
+    std::error_code ec;
+
+    if (const char* env = std::getenv("TRIAEVUM_DATA_DIR"); env && *env) {
+        roots.push_back(std::filesystem::path(env));
+    }
+#if defined(_WIN32)
+    if (const char* appData = std::getenv("APPDATA"); appData && *appData) {
+        roots.push_back(std::filesystem::path(appData) / "TriAevum");
+    }
+#else
+    if (const char* home = std::getenv("HOME"); home && *home) {
+        roots.push_back(std::filesystem::path(home) / ".var/app/io.github.coccofresco.TriAevum/data/TriAevum");
+        roots.push_back(std::filesystem::path(home) / ".local/share/TriAevum");
+    }
+    if (const char* xdg = std::getenv("XDG_DATA_HOME"); xdg && *xdg) {
+        roots.push_back(std::filesystem::path(xdg) / "TriAevum");
+    }
+#endif
+    roots.push_back(std::filesystem::current_path(ec) / "data" / "TriAevum");
+    roots.push_back(std::filesystem::current_path(ec));
+    return roots;
+}
+
 inline std::vector<std::filesystem::path> FindActiveUiDirectories(const std::filesystem::path& loadDir) {
     std::vector<std::filesystem::path> dirs;
     std::error_code ec;
@@ -25,21 +51,22 @@ inline std::vector<std::filesystem::path> FindActiveUiDirectories(const std::fil
 
         auto candidate2 = loadDir / "UI";
         if (std::filesystem::exists(candidate2, ec) && candidate2 != candidate1) dirs.push_back(candidate2);
+
+        auto candidate3 = loadDir / "textures" / "0004000000033600" / "UI";
+        if (std::filesystem::exists(candidate3, ec) && candidate3 != candidate1 && candidate3 != candidate2) dirs.push_back(candidate3);
     }
 
-    auto flatpakPath = std::filesystem::path("/home/jesus/.var/app/io.github.coccofresco.TriAevum/data/TriAevum/textures/load/textures/0004000000033600/UI");
-    if (std::filesystem::exists(flatpakPath, ec) && std::find(dirs.begin(), dirs.end(), flatpakPath) == dirs.end()) {
-        dirs.push_back(flatpakPath);
+    for (const auto& root : GetDataRoots()) {
+        auto p1 = root / "textures" / "load" / "textures" / "0004000000033600" / "UI";
+        if (std::filesystem::exists(p1, ec) && std::find(dirs.begin(), dirs.end(), p1) == dirs.end()) {
+            dirs.push_back(p1);
+        }
+        auto p2 = root / "load" / "textures" / "0004000000033600" / "UI";
+        if (std::filesystem::exists(p2, ec) && std::find(dirs.begin(), dirs.end(), p2) == dirs.end()) {
+            dirs.push_back(p2);
+        }
     }
 
-    auto localPath = std::filesystem::path("/home/jesus/Juegos/TriAevum-dev/textures/load/textures/0004000000033600/UI");
-    if (std::filesystem::exists(localPath, ec) && std::find(dirs.begin(), dirs.end(), localPath) == dirs.end()) {
-        dirs.push_back(localPath);
-    }
-
-    if (dirs.empty()) {
-        dirs.push_back(flatpakPath);
-    }
     return dirs;
 }
 
@@ -54,15 +81,10 @@ inline std::filesystem::path FindPacksRootDir(const std::filesystem::path& loadD
         candidate = loadDir / ".." / "texture_packs";
         if (std::filesystem::exists(candidate, ec)) return candidate;
     }
-    auto candidate = std::filesystem::path("/home/jesus/.var/app/io.github.coccofresco.TriAevum/data/TriAevum/texture_packs");
-    if (std::filesystem::exists(candidate, ec)) return candidate;
-
-    candidate = std::filesystem::path("/home/jesus/Juegos/TriAevum-dev/texture_packs");
-    if (std::filesystem::exists(candidate, ec)) return candidate;
-
-    candidate = std::filesystem::current_path(ec) / "texture_packs";
-    if (std::filesystem::exists(candidate, ec)) return candidate;
-
+    for (const auto& root : GetDataRoots()) {
+        auto candidate = root / "texture_packs";
+        if (std::filesystem::exists(candidate, ec)) return candidate;
+    }
     return {};
 }
 
@@ -144,13 +166,51 @@ inline bool ApplyControllerPromptPack(int styleIndex, std::string* statusOut = n
         }
     }
 
+    // Copy TopScreen binary override pack (.o3tu) across active roots
+    for (const auto& root : GetDataRoots()) {
+        const auto topscreenPacksDir = root / "mods" / "topscreen" / "packs";
+        const auto o3tuSrc = topscreenPacksDir / ("atlas_overrides_" + packName + ".o3tu");
+        if (std::filesystem::exists(o3tuSrc, ec)) {
+            const auto topscreenDir = root / "mods" / "topscreen";
+            for (const auto& entry : std::filesystem::directory_iterator(topscreenDir, ec)) {
+                if (entry.is_directory(ec)) {
+                    const auto targetFile = entry.path() / "atlas_overrides.o3tu";
+                    if (std::filesystem::exists(targetFile, ec)) {
+                        std::filesystem::copy_file(o3tuSrc, targetFile,
+                                                   std::filesystem::copy_options::overwrite_existing, ec);
+                    }
+                }
+            }
+        }
+
+        // Synchronize DualSense motion and GUID settings in controls.json
+        const auto controlsJsonPath = root / "config" / "controls.json";
+        if (std::filesystem::exists(controlsJsonPath, ec)) {
+            try {
+                std::ifstream inFile(controlsJsonPath);
+                if (inFile.is_open()) {
+                    nlohmann::json cfg;
+                    inFile >> cfg;
+                    inFile.close();
+                    cfg["controller_guid"] = "";
+                    if (cfg.contains("aim")) cfg["aim"]["source"] = "automatic";
+                    if (cfg.contains("calibration")) cfg["calibration"]["controller_guid"] = "";
+                    std::ofstream outFile(controlsJsonPath);
+                    if (outFile.is_open()) {
+                        outFile << cfg.dump(2) << "\n";
+                    }
+                }
+            } catch (...) {}
+        }
+    }
+
     // Trigger immediate texture reload in Azahar runtime
     ::Oot3d::Renderer::AzaharTexturePackRuntime::Instance().Reload();
 
     if (statusOut) {
-        if (styleIndex == 0) *statusOut = "PlayStation 5 (DualSense) buttons applied live!";
-        else if (styleIndex == 1) *statusOut = "Xbox Series / One buttons applied live!";
-        else *statusOut = "Nintendo Original buttons applied live!";
+        if (styleIndex == 0) *statusOut = "PlayStation 5 (DualSense: ✖ ⭘ ◼ ▲) buttons applied!";
+        else if (styleIndex == 1) *statusOut = "Xbox Series / One buttons applied!";
+        else *statusOut = "Nintendo Original buttons applied!";
     }
     return true;
 }

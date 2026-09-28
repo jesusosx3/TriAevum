@@ -1,26 +1,36 @@
 #!/usr/bin/env python3
 """
 Generate high-definition PS5 DualSense and Xbox Series/One controller prompt packs
-for TriAevum / OoT3D TopScreen HUD.
+for TriAevum / OoT3D TopScreen HUD and Azahar texture loader.
 """
 
 import os
 import shutil
+import sys
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
-DATA_ROOT = Path("/home/jesus/.var/app/io.github.coccofresco.TriAevum/data/TriAevum")
+sys.path.append(str(Path(__file__).parent))
+from patch_atlas_overrides import patch_custom_menu, get_data_root, get_font
+
+DATA_ROOT = get_data_root()
 BASE_UI_DIR = DATA_ROOT / "textures" / "load" / "textures" / "0004000000033600" / "UI"
 PACKS_ROOT = DATA_ROOT / "texture_packs"
-FONT_PATH = "/usr/share/fonts/abattis-cantarell-fonts/Cantarell-Bold.otf"
 
 MENU_FILES = [
     "tex1_512x256_7D6716CEB0D7F7FA_4_mip0.png",
-    "06_EU_SPANISH/tex1_512x256_6664660F78E9D8C4_4_mip0.png",
+    "00_JP_JAPANESE/tex1_512x256_A2D74F45889F712A_4_mip0.png",
     "01_US_ENGLISH/tex1_512x256_BB00B25B152582B6_4_mip0.png",
     "02_EU_ENGLISH/tex1_512x256_164411C4E5F37729_4_mip0.png",
+    "03_EU_GERMAN/tex1_512x256_935CB74571E453B5_4_mip0.png",
+    "04_EU_FRENCH/tex1_512x256_143E9DF8CA80C390_4_mip0.png",
+    "05_US_FRENCH/tex1_512x256_F43D6593C5248F84_4_mip0.png",
+    "06_EU_SPANISH/tex1_512x256_6664660F78E9D8C4_4_mip0.png",
     "07_US_SPANISH/tex1_512x256_9623362A9111CEDA_4_mip0.png",
+    "08_EU_ITALIAN/tex1_512x256_1866B83D16C1D4AD_4_mip0.png",
 ]
+
+CUSTOM_MENU_FILE = "tex1_512x512_962F45C78450C392_0_mip0.png"
 
 def make_ps5_glyph(name, size=128):
     im = Image.new("RGBA", (size, size), (0, 0, 0, 0))
@@ -55,7 +65,7 @@ def make_ps5_glyph(name, size=128):
     elif name in ("l1", "r1", "l2", "r2"):
         d.rounded_rectangle((pad, int(size * 0.18), size - pad, int(size * 0.82)),
                             radius=int(size * 0.2), fill=(22, 25, 34, 235), outline=(72, 84, 96, 255), width=3)
-        font = ImageFont.truetype(FONT_PATH, int(size * 0.42))
+        font = get_font(int(size * 0.42))
         text = name.upper()
         bbox = d.textbbox((0, 0), text, font=font)
         tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
@@ -77,7 +87,7 @@ def make_xbox_glyph(name, size=128):
     if name in colors:
         bg, fg = colors[name]
         d.ellipse((pad, pad, size - pad, size - pad), fill=bg, outline=(255, 255, 255, 220), width=2)
-        font = ImageFont.truetype(FONT_PATH, int(size * 0.6))
+        font = get_font(int(size * 0.6))
         text = name.upper()
         bbox = d.textbbox((0, 0), text, font=font)
         tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
@@ -87,7 +97,7 @@ def make_xbox_glyph(name, size=128):
     elif name in ("lb", "rb", "lt", "rt"):
         d.rounded_rectangle((pad, int(size * 0.18), size - pad, int(size * 0.82)),
                             radius=int(size * 0.2), fill=(25, 30, 40, 235), outline=(0, 120, 215, 255), width=3)
-        font = ImageFont.truetype(FONT_PATH, int(size * 0.42))
+        font = get_font(int(size * 0.42))
         text = name.upper()
         bbox = d.textbbox((0, 0), text, font=font)
         tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
@@ -102,7 +112,7 @@ def make_label(text, width=136, height=88, is_xbox=False):
     border_col = (0, 120, 215, 255) if is_xbox else (80, 90, 110, 255)
     d.rounded_rectangle((2, 2, width - 2, height - 2), radius=14,
                         fill=(20, 24, 32, 240), outline=border_col, width=2)
-    font = ImageFont.truetype(FONT_PATH, int(height * 0.58))
+    font = get_font(int(height * 0.58))
     bbox = d.textbbox((0, 0), text, font=font)
     tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
     tx = (width - tw) / 2 - bbox[0]
@@ -160,7 +170,16 @@ def main():
     ps5_dir = PACKS_ROOT / "ps5" / "load" / "textures" / "0004000000033600" / "UI"
     xbox_dir = PACKS_ROOT / "xbox" / "load" / "textures" / "0004000000033600" / "UI"
 
-    # 1. First backup Nintendo original if not present
+    scratch_backup = Path(__file__).resolve().parent.parent / "scratch" / "custom_menu00_original_nintendo.png"
+    custom_menu_src = BASE_UI_DIR / CUSTOM_MENU_FILE
+    if scratch_backup.is_file():
+        custom_menu_base = scratch_backup
+    elif (nintendo_dir / CUSTOM_MENU_FILE).is_file():
+        custom_menu_base = nintendo_dir / CUSTOM_MENU_FILE
+    else:
+        custom_menu_base = custom_menu_src
+
+    # 1. First backup Nintendo originals if not present
     for rel in MENU_FILES:
         src = BASE_UI_DIR / rel
         if not src.is_file():
@@ -179,7 +198,27 @@ def main():
         dst_xbox = xbox_dir / rel
         patch_menu_texture(dst_nintendo, dst_xbox, "xbox")
 
-    # Copy all other UI textures (custom_menu, numbers, etc.) to all packs so they are fully self-contained
+    # 2. Patch custom_menu00 (Action Bubbles: ✖ ⭘ ◼ ▲ L2 R2 / A B X Y LT RT)
+    if custom_menu_base.is_file():
+        orig_custom_menu = Image.open(custom_menu_base).convert("RGBA")
+        
+        # Nintendo: pristine original
+        (nintendo_dir / CUSTOM_MENU_FILE).parent.mkdir(parents=True, exist_ok=True)
+        orig_custom_menu.save(nintendo_dir / CUSTOM_MENU_FILE)
+        
+        # PS5
+        ps5_custom_menu = patch_custom_menu(orig_custom_menu, "ps5")
+        (ps5_dir / CUSTOM_MENU_FILE).parent.mkdir(parents=True, exist_ok=True)
+        ps5_custom_menu.save(ps5_dir / CUSTOM_MENU_FILE)
+        print(f"Patched [PS5] -> {ps5_dir / CUSTOM_MENU_FILE}")
+        
+        # Xbox
+        xbox_custom_menu = patch_custom_menu(orig_custom_menu, "xbox")
+        (xbox_dir / CUSTOM_MENU_FILE).parent.mkdir(parents=True, exist_ok=True)
+        xbox_custom_menu.save(xbox_dir / CUSTOM_MENU_FILE)
+        print(f"Patched [XBOX] -> {xbox_dir / CUSTOM_MENU_FILE}")
+
+    # 3. Copy all other UI textures (numbers, icons, etc.) to all packs so they are fully self-contained
     for other in BASE_UI_DIR.glob("**/*.png"):
         rel = other.relative_to(BASE_UI_DIR)
         for target_dir in (nintendo_dir, ps5_dir, xbox_dir):

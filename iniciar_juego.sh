@@ -58,7 +58,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-GAME_DIR="/home/jesus/Juegos/TriAevum-dev"
+GAME_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [ -n "${MANDO:-}" ]; then
     "$GAME_DIR/cambiar_mando.sh" "$MANDO"
@@ -71,11 +71,50 @@ export SDL_JOYSTICK_HIDAPI_PS5_RUMBLE=1
 export SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1
 export SDL_HAPTIC_GAIN_MAX=100
 
-# Configuración del entorno de ejecución optimizado
-export LD_LIBRARY_PATH="/home/linuxbrew/.linuxbrew/lib:/home/linuxbrew/.linuxbrew/opt/bzip2/lib:/home/linuxbrew/.linuxbrew/opt/openssl@3/lib:${LD_LIBRARY_PATH:-}"
+# Configuración del entorno de ejecución optimizado (priorizar SDL del sistema con soporte HIDAPI/udev para sensores)
+mkdir -p "$GAME_DIR/build-runtime/lib"
+for sdl_lib in /usr/lib64/libSDL2-2.0.so.0 /usr/lib/x86_64-linux-gnu/libSDL2-2.0.so.0; do
+    if [ -f "$sdl_lib" ]; then
+        ln -sf "$sdl_lib" "$GAME_DIR/build-runtime/lib/libSDL2-2.0.so.0"
+        break
+    fi
+done
+for sdl3_lib in /usr/lib64/libSDL3.so.0 /usr/lib/x86_64-linux-gnu/libSDL3.so.0; do
+    if [ -f "$sdl3_lib" ]; then
+        ln -sf "$sdl3_lib" "$GAME_DIR/build-runtime/lib/libSDL3.so.0"
+        break
+    fi
+done
+export LD_LIBRARY_PATH="$GAME_DIR/build-runtime/lib:${LD_LIBRARY_PATH:-}"
 
-PROFILE="/home/jesus/.var/app/io.github.coccofresco.TriAevum/data/TriAevum/TriAevum.host.launch.json"
-BINARY="$GAME_DIR/build-runtime/TriAevum"
+# Búsqueda del perfil de lanzamiento TriAevum.host.launch.json
+PROFILE=""
+for candidate in \
+    "${TRIAEVUM_LAUNCH_PROFILE:-}" \
+    "$HOME/.var/app/io.github.coccofresco.TriAevum/data/TriAevum/TriAevum.host.launch.json" \
+    "${XDG_DATA_HOME:-}/TriAevum/TriAevum.host.launch.json" \
+    "$HOME/.local/share/TriAevum/TriAevum.host.launch.json" \
+    "$GAME_DIR/data/TriAevum/TriAevum.host.launch.json" \
+    "$GAME_DIR/TriAevum.host.launch.json"; do
+    if [ -n "$candidate" ] && [ -f "$candidate" ]; then
+        PROFILE="$candidate"
+        break
+    fi
+done
+
+BINARY=""
+for candidate in \
+    "$GAME_DIR/TriAevum" \
+    "$GAME_DIR/build-runtime/TriAevum" \
+    "$GAME_DIR/build/TriAevum"; do
+    if [ -x "$candidate" ]; then
+        BINARY="$candidate"
+        break
+    fi
+done
+if [ -z "$BINARY" ]; then
+    BINARY="TriAevum"
+fi
 
 # Detección y activación de MangoHud para monitoreo de FPS y frametimes
 HUD_WRAPPER=""

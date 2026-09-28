@@ -51,6 +51,14 @@ std::int32_t SelectControllerDevice(std::span<const DeviceDescriptor> devices,
         if (device.InstanceId == previousInstance) return previousInstance;
         if (selected < 0 || device.InstanceId < selected) selected = device.InstanceId;
     }
+    if (selected >= 0) {
+        return selected;
+    }
+    for (const auto& device : devices) {
+        if (device.InstanceId < 0) continue;
+        if (device.InstanceId == previousInstance) return previousInstance;
+        if (selected < 0 || device.InstanceId < selected) selected = device.InstanceId;
+    }
     return selected;
 }
 
