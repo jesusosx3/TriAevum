@@ -155,6 +155,10 @@ GraphicsSettingsRuntime::GraphicsSettingsRuntime() {
                    mode == "90") {
             initial.FrameRate = FrameRateMode::Interpolated3x;
             customized = true;
+        } else if (mode == "Interpolated4x" || mode == "Fixed120" ||
+                   mode == "4x" || mode == "120") {
+            initial.FrameRate = FrameRateMode::Interpolated4x;
+            customized = true;
         } else if (mode == "Uncapped" || mode == "0") {
             initial.FrameRate = FrameRateMode::Uncapped;
             customized = true;

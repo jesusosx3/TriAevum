@@ -64,8 +64,10 @@ constexpr EnumNames<FrameRateMode> kFrameRateNames{
     {FrameRateMode::Original30, "Original30"},
     {FrameRateMode::Interpolated2x, "Interpolated2x"},
     {FrameRateMode::Interpolated3x, "Interpolated3x"},
+    {FrameRateMode::Interpolated4x, "Interpolated4x"},
     {FrameRateMode::Uncapped, "Uncapped"},
     {FrameRateMode::Interpolated2x, "Fixed60"},
+    {FrameRateMode::Interpolated4x, "Fixed120"},
 };
 constexpr EnumNames<DirectionalShadowMode> kDirectionalShadowNames{
     {DirectionalShadowMode::Off, "Off"},

@@ -101,7 +101,7 @@ bool GraphicsSettingsPanel::DrawDisplaySettings(GraphicsSettings& settings, cons
     ImGui::SeparatorText("Motion and camera");
     const char* const frameRates[] = {
         "Original 30 FPS", "Interpolated 2x (60 FPS)",
-        "Interpolated 3x (90 FPS)", "Uncapped"};
+        "Interpolated 3x (90 FPS)", "Interpolated 4x (120 FPS)", "Uncapped"};
     changed |= EnumCombo("Frame rate", settings.FrameRate, frameRates);
     changed |= ImGui::SliderFloat("Global scene FOV", &settings.FovMultiplier,
                                   1.0F, 1.5F, "%.2fx");

@@ -141,6 +141,15 @@ vec3 oot3d_linear_to_srgb(vec3 value) {
     vec3 higher=1.055*pow(value,vec3(1.0/2.4))-0.055;
     return mix(higher,lower,cutoff);
 }
+
+vec3 oot3d_aces_filmic(vec3 x) {
+    const float a = 2.51;
+    const float b = 0.03;
+    const float c = 2.43;
+    const float d = 0.59;
+    const float e = 0.14;
+    return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
+}
 )glsl";
     source += R"glsl(
 float oot3d_outline_sample_scene_depth(vec2 uv) {
@@ -213,6 +222,8 @@ void main() {
     vec4 center = oot3d_compose_at(source_uv);
     if (scanout.aa_mode == 1u) output_color = oot3d_fxaa(source_uv, center);
     else output_color = center;
+    if (scanout.input_linear != 0u)
+        output_color.rgb = oot3d_aces_filmic(output_color.rgb);
     if(scanout.encode_srgb!=0u)
         output_color.rgb=oot3d_linear_to_srgb(output_color.rgb);
 }

@@ -1,5 +1,6 @@
 #include "oot3d_native_controls_settings_panel.h"
 #include "oot3d_top_screen_control_widgets.h"
+#include "fast/oot3d/controller_prompts_selector.h"
 
 #include <imgui.h>
 
@@ -434,6 +435,8 @@ class NativeControlsSettingsPanel final
         }
       }
     }
+    ImGui::SeparatorText("Controller Button Prompts (UI Style)");
+    Fast::Oot3d::DrawControllerPromptSelector(&mStatus);
   }
 
   void DrawBindings() {

@@ -1,4 +1,5 @@
 #include "oot3d_top_screen_settings_panel.h"
+#include "fast/oot3d/controller_prompts_selector.h"
 
 #include <imgui.h>
 
@@ -161,6 +162,8 @@ private:
       mDirty = true;
     }
 
+    ImGui::SeparatorText("Controller Button Prompts (UI Style)");
+    Fast::Oot3d::DrawControllerPromptSelector(&mStatus);
   }
   std::shared_ptr<TopScreenUiConfigRuntime> mRuntime;
   TopScreenUiConfig mDraft;

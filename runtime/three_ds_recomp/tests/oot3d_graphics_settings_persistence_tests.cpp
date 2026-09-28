@@ -315,6 +315,15 @@ TEST(Oot3dGraphicsSettingsPersistence, MigratesLegacyFixed60NameToInterpolated2x
     EXPECT_EQ(Fast::Oot3d::SerializeGraphicsSettings(loaded.Value)["FrameRate"]["Mode"], "Interpolated2x");
 }
 
+TEST(Oot3dGraphicsSettingsPersistence, MigratesLegacyFixed120NameToInterpolated4x) {
+    auto document = Fast::Oot3d::SerializeGraphicsSettings(CompleteSettings());
+    document["FrameRate"]["Mode"] = "Fixed120";
+    const auto loaded = Fast::Oot3d::DeserializeGraphicsSettings(document);
+    ASSERT_TRUE(loaded.Found);
+    EXPECT_EQ(loaded.Value.FrameRate, Fast::Oot3d::FrameRateMode::Interpolated4x);
+    EXPECT_EQ(Fast::Oot3d::SerializeGraphicsSettings(loaded.Value)["FrameRate"]["Mode"], "Interpolated4x");
+}
+
 TEST(Oot3dGraphicsSettingsPersistence,
      MigratesVersionSixLiveGrassAsSavedPreset) {
     auto document =

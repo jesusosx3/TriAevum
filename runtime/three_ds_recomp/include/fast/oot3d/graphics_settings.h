@@ -21,10 +21,12 @@ enum class FrameRateMode : uint8_t {
     Original30,
     Interpolated2x,
     Interpolated3x,
+    Interpolated4x,
     Uncapped,
     // Source compatibility for integrations that still name the former
-    // fixed-60 presentation mode. Persistence emits Interpolated2x.
+    // fixed presentation modes. Persistence emits InterpolatedNx.
     Fixed60 = Interpolated2x,
+    Fixed120 = Interpolated4x,
 };
 enum class AmbientOcclusionMode : uint8_t { Off, Cacao };
 enum class ReflectionMode : uint8_t { Off, HiZ, FidelityFxSssr };

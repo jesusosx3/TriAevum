@@ -1,4 +1,5 @@
 #include "fast/oot3d/azahar_texture_pack_panel.h"
+#include "fast/oot3d/controller_prompts_selector.h"
 
 #include "oot3d/renderer/azahar_texture_pack.h"
 
@@ -71,6 +72,9 @@ bool DrawAzaharTexturePackPanel(AzaharTexturePackSettings& settings, AzaharTextu
         texturePacks.Reload();
         state.Status = "Custom texture index reloaded";
     }
+
+    ImGui::SeparatorText("Controller Button Prompts (UI Style)");
+    Fast::Oot3d::DrawControllerPromptSelector(&state.Status);
 
     const auto status = texturePacks.Snapshot();
     ImGui::SeparatorText("Resolved paths");
