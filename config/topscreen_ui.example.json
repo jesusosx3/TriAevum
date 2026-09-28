@@ -15,7 +15,7 @@
   "camera_fov_percent": 100,
   "dpad_child": ["view", "ocarina", "item_zr", "item_zl"],
   "dpad_adult": ["view", "ocarina", "iron_boots", "hover_boots"],
-  "free_camera_enabled": false,
+  "free_camera_enabled": true,
   "free_camera_speed_level": 3,
   "free_camera_smoothing": "default",
   "free_camera_invert_x": false,

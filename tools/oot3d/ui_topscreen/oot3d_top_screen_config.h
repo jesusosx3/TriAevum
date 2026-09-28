@@ -105,7 +105,7 @@ struct TopScreenUiConfig {
       kTopScreenChildDpadDefaults;
   std::array<TopScreenDpadAction, 4> AdultDpad =
       kTopScreenAdultDpadDefaults;
-  bool FreeCameraEnabled = false;
+  bool FreeCameraEnabled = true;
   std::uint8_t FreeCameraSpeedLevel = 3U;
   TopScreenFreeCameraSmoothing FreeCameraSmoothing =
       TopScreenFreeCameraSmoothing::Default;

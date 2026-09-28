@@ -42,21 +42,29 @@ while [[ $# -gt 0 ]]; do
             RES_VAL="$2"
             shift 2
             case "$RES_VAL" in
+                deck|800p|16:10) RES_ARGS=("--width" "1280" "--height" "800") ;;
                 720p|720) RES_ARGS=("--width" "1280" "--height" "720") ;;
                 1080p|1080) RES_ARGS=("--width" "1920" "--height" "1080") ;;
                 1440p|1440|2k) RES_ARGS=("--width" "2560" "--height" "1440") ;;
                 4k|2160p|2160) RES_ARGS=("--width" "3840" "--height" "2160") ;;
-                *) echo "Resolución '$RES_VAL' no estándar";;
+                ultrawide|21:9|1080uw|2560x1080) RES_ARGS=("--width" "2560" "--height" "1080") ;;
+                1440uw|3440x1440) RES_ARGS=("--width" "3440" "--height" "1440") ;;
+                superwide|32:9|5120x1440) RES_ARGS=("--width" "5120" "--height" "1440") ;;
+                *) echo "Resolución personalizada o no estándar: '$RES_VAL'";;
             esac
             ;;
         --res=*)
             RES_VAL="${1#*=}"
             shift 1
             case "$RES_VAL" in
+                deck|800p|16:10) RES_ARGS=("--width" "1280" "--height" "800") ;;
                 720p|720) RES_ARGS=("--width" "1280" "--height" "720") ;;
                 1080p|1080) RES_ARGS=("--width" "1920" "--height" "1080") ;;
                 1440p|1440|2k) RES_ARGS=("--width" "2560" "--height" "1440") ;;
                 4k|2160p|2160) RES_ARGS=("--width" "3840" "--height" "2160") ;;
+                ultrawide|21:9|1080uw|2560x1080) RES_ARGS=("--width" "2560" "--height" "1080") ;;
+                1440uw|3440x1440) RES_ARGS=("--width" "3440" "--height" "1440") ;;
+                superwide|32:9|5120x1440) RES_ARGS=("--width" "5120" "--height" "1440") ;;
             esac
             ;;
         *)

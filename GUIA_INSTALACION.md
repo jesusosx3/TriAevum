@@ -79,15 +79,25 @@ Puedes lanzar el juego en cualquier momento con tus opciones preferidas:
 ./iniciar_juego.sh --mando ps5 --fps free --res 1080p
 ```
 
-### Integración en Steam Deck / Steam
+### Integración Automática en Steam / Steam Deck (1 Solo Clic)
 
-1. Abre Steam en modo escritorio.
-2. Haz clic en **Productos** > **Añadir un producto que no es de Steam a mi biblioteca...**.
-3. Selecciona `iniciar_juego.sh` o el acceso directo `TriAevum.desktop`.
-4. En las propiedades del acceso directo en Steam, añade los parámetros deseados en Parámetros de lanzamiento:
-   ```
-   --mando ps5 --fps 60 --res 720p
-   ```
+Hemos incluido un script inteligente para añadir el juego a Steam automáticamente con su icono y banner oficial:
+```bash
+./agregar_a_steam.sh
+```
+Esto añadirá **TriAevum** a tu biblioteca de Steam con carátula en alta resolución y configuración optimizada para Steam Deck y modo Big Picture.
+
+### Opciones de Pantalla y Resoluciones Ultrawide
+Puedes lanzar el juego en cualquier aspecto de pantalla (16:9, 16:10 para Steam Deck, 21:9 o 32:9 panorámico sin distorsión):
+```bash
+./iniciar_juego.sh --res deck       # 1280x800 (Steam Deck nativo)
+./iniciar_juego.sh --res 1080p      # 1920x1080 (Full HD estándar)
+./iniciar_juego.sh --res 1440p      # 2560x1440 (2K QHD)
+./iniciar_juego.sh --res 4k         # 3840x2160 (4K UHD)
+./iniciar_juego.sh --res 21:9       # 2560x1080 (Ultrawide)
+./iniciar_juego.sh --res 1440uw     # 3440x1440 (Ultrawide 2K)
+./iniciar_juego.sh --res 32:9       # 5120x1440 (Super Ultrawide)
+```
 
 ---
 
