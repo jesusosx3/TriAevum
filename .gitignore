@@ -471,3 +471,14 @@ _packages
 /clang-format
 /clang-format.exe
 *.o2r
+
+# Local test scratch and patches
+scratch/
+*.patch
+*.3ds
+*.cci
+*.cia
+*.o3tu
+savedata/
+*.oot3dsav
+

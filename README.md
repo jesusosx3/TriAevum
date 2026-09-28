@@ -3,6 +3,11 @@
 A native PC AOT recompilation of *The Legend of Zelda: Ocarina of Time 3D*,
 with a modern NRI/Vulkan renderer, single-screen UI and customizable graphics.
 
+> [!TIP]
+> 🇪🇸 **¿Buscas la guía en español o los instaladores de 1 clic para Linux y Windows?**  
+> Consulta nuestra [**Guía Completa de Instalación en Español**](GUIA_INSTALACION.md).  
+> Incluye instaladores automáticos de 1 clic (`instalar_linux.sh` y `instalar_windows.bat`), soporte nativo de sensores y giroscopio para **PlayStation 5 (DualSense)** y botones de **Xbox**, 120 FPS y la solución al congelamiento en cinemáticas de Vulkan.
+
 ## Credit Where It Belongs
 
 Before the shaders, settings and excessive grass: **TriAevum would not exist in
@@ -137,6 +142,13 @@ components retain their own licenses and notices:
 See the [release and build contract](docs/TRIAEVUM_PRECOMPILED_RELEASE.md) for
 source availability and developer packaging.
 
-TriAevum is independent and is not affiliated with or endorsed by Nintendo.
+TriAevum is independent and is not affiliated with or endorsed by Nintendo Co., Ltd. or Grezzo Co., Ltd.
+
+## Legal and Clean-Room Notice / Aviso Legal y Preservación
+
+This project strictly adheres to clean-room reverse engineering standards and copyright compliance:
+- **No Copyrighted Game Assets Distributed**: This repository does NOT contain, redistribute, or link to copyrighted ROM files (`.3ds`, `.cci`, `.cia`), encrypted binaries (`code.bin`), decrypted RomFS dumps, textures, dialogue, or audio.
+- **Local User Extraction**: All game assets are reconstructed strictly on the user's local machine from their legally owned physical cartridge dumped from their own Nintendo 3DS console using the local `forge.py` pipeline.
+- **Procedural Artwork**: Controller glyphs and overlays (PlayStation 5 and Xbox button prompts) are generated independently and procedurally via vector scripting, without utilizing proprietary Nintendo assets.
 
 Worst case scenario, at least we got more grass.
