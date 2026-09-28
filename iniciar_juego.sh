@@ -30,6 +30,14 @@ while [[ $# -gt 0 ]]; do
             shift 1
             FPS_ARG="$FPS_VAL"
             ;;
+        --cacao)
+            CACAO_OPT=1
+            shift 1
+            ;;
+        --no-cacao)
+            CACAO_OPT=0
+            shift 1
+            ;;
         --res)
             RES_VAL="$2"
             shift 2
@@ -138,6 +146,12 @@ if [ ${#RES_ARGS[@]} -gt 0 ]; then
     EXTRA_EXEC_ARGS+=("${RES_ARGS[@]}")
 fi
 
+# Oclusión Ambiental (CACAO) de FidelityFX de alta fidelidad
+if [ "${CACAO_OPT:-1}" = "1" ]; then
+    export OOT3D_GRAPHICS_CACAO="1"
+    export OOT3D_GRAPHICS_CACAO_QUALITY="1"
+fi
+
 echo "========================================================"
 echo "    TriAevum (The Legend of Zelda: Ocarina of Time 3D)  "
 echo "    Edición Remaster 10/10 (DualSense + 120 FPS + HD UI)"
@@ -147,6 +161,9 @@ if [ -n "$FPS_ARG" ]; then
 fi
 if [ ${#RES_ARGS[@]} -gt 0 ]; then
     echo " -> Resolución configurada: ${RES_ARGS[1]}x${RES_ARGS[3]}"
+fi
+if [ "${CACAO_OPT:-1}" = "1" ]; then
+    echo " -> Oclusión Ambiental: FidelityFX CACAO activo"
 fi
 echo " -> Sensores DualSense: Giroscopio y Hápticos (HIDAPI activos)"
 echo "========================================================"

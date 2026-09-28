@@ -84,6 +84,7 @@
 #include "fast/oot3d/perspective_fov_policy.h"
 #include "fast/oot3d/presentation_pacing_policy.h"
 #include "fast/oot3d/title_render_backend.h"
+#include "fast/oot3d/controller_prompts_selector.h"
 #include "oot3d/renderer/azahar_texture_pack.h"
 #include "ship/Context.h"
 #include "ship/audio/Audio.h"
@@ -2711,6 +2712,13 @@ PollNativeA32Input(Fast::Fast3dWindow &window,
     pollingState.RightStickProfile = {};
     pollingState.VirtualMotion.ResetController();
     pollingState.PreviousControllerButtons = pollingState.PendingControllerButtons = 0;
+    if (selectedController.Controller != nullptr) {
+      const auto sel = std::find_if(selectedController.Devices.begin(), selectedController.Devices.end(),
+          [](const auto& dev) { return dev.Selected; });
+      if (sel != selectedController.Devices.end()) {
+        Fast::Oot3d::AutoDetectControllerPromptStyle(sel->Name, sel->Guid);
+      }
+    }
   }
   pollingState.ControllerInstance = selectedController.InstanceId;
   const auto selectedDevice = std::find_if(selectedController.Devices.begin(), selectedController.Devices.end(),

@@ -270,4 +270,41 @@ inline bool DrawControllerPromptSelector(std::string* statusMessage = nullptr) {
     return changed;
 }
 
+inline bool AutoDetectControllerPromptStyle(const std::string& deviceName, const std::string& deviceGuid, std::string* statusOut = nullptr) {
+    std::string nameLower = deviceName;
+    std::transform(nameLower.begin(), nameLower.end(), nameLower.begin(), [](unsigned char c) { return std::tolower(c); });
+
+    int detectedStyle = -1;
+    // Check for PlayStation (DualSense, PS5, PS4, DualShock, Sony VID 054c)
+    if (nameLower.find("dualsense") != std::string::npos ||
+        nameLower.find("ps5") != std::string::npos ||
+        nameLower.find("playstation") != std::string::npos ||
+        nameLower.find("ps4") != std::string::npos ||
+        nameLower.find("dualshock") != std::string::npos ||
+        deviceGuid.find("054c") != std::string::npos) {
+        detectedStyle = 0; // PS5
+    }
+    // Check for Xbox (Xbox, Microsoft VID 045e, X-Input)
+    else if (nameLower.find("xbox") != std::string::npos ||
+             nameLower.find("x-box") != std::string::npos ||
+             nameLower.find("xinput") != std::string::npos ||
+             deviceGuid.find("045e") != std::string::npos) {
+        detectedStyle = 1; // Xbox
+    }
+    // Check for Switch / Nintendo (Switch Pro, Joy-Con, VID 057e)
+    else if (nameLower.find("switch") != std::string::npos ||
+             nameLower.find("nintendo") != std::string::npos ||
+             nameLower.find("joy-con") != std::string::npos ||
+             deviceGuid.find("057e") != std::string::npos) {
+        detectedStyle = 2; // Nintendo
+    }
+
+    if (detectedStyle >= 0 && detectedStyle != ActiveControllerPromptIndex()) {
+        ActiveControllerPromptIndex() = detectedStyle;
+        return detail::ApplyControllerPromptPack(detectedStyle, statusOut);
+    }
+    return false;
+}
+
 } // namespace Fast::Oot3d
+

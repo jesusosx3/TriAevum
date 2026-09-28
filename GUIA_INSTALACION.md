@@ -113,7 +113,8 @@ Puedes lanzar el juego en cualquier momento con tus opciones preferidas:
 
 TriAevum incluye soporte nativo para los sensores del mando **Sony DualSense (PS5)**:
 
-### 1. Conexión recomendada
+### 1. Conexión recomendada y Auto-Detección Inteligente
+- **Auto-Detección:** TriAevum detecta automáticamente si conectas un mando de **PlayStation 5 (DualSense)**, **Xbox** o **Nintendo** y adapta al instante todos los botones y glifos en pantalla sin necesidad de tocar nada.
 - **Vía Bluetooth:** Empareja el DualSense manteniendo pulsados el botón **Create (Share)** + botón **PS** hasta que la barra de luz parpadee rápidamente. Conéctalo desde la configuración de Bluetooth de tu sistema.
 - **Vía Cable USB-C:** Conecta el mando directamente por cable. TriAevum lo reconocerá automáticamente.
 
@@ -130,13 +131,11 @@ TriAevum incluye soporte nativo para los sensores del mando **Sony DualSense (PS
 Durante la partida, pulsa la tecla **F1** para abrir el menú de superposición en tiempo real:
 
 1. **Selector de Mandos:**
-   - **PlayStation 5:** Cambia al instante la interfaz superior para mostrar los iconos ✖, ⭘, ◼, ▲, L1, R1, L2, R2.
-   - **Xbox Series / One:** Cambia a A, B, X, Y, LB, RB, LT, RT.
-   - **Nintendo Original:** Restaura los botones originales de Nintendo 3DS / Switch.
+   - Permite forzar manualmente los botones si prefieres jugar con iconos de PlayStation 5, Xbox o Nintendo independientemente del mando conectado.
 2. **Gráficos y Rendimiento:**
+   - **Oclusión Ambiental (FidelityFX CACAO):** Activa sombras de contacto de alta fidelidad en esquinas, mazmorras y alrededor de Link. (Viene activo por defecto en los scripts de inicio).
    - **Escalado:** Selección entre NIS y FSR con ajuste de nitidez (*Sharpness*).
    - **Anti-Aliasing:** Filtros SMAA 1x o TAA cinemático.
-   - **Oclusión Ambiental:** CACAO de alta definición.
    - **Tasa de Refresco:** Sincronización a 30, 60, 90, 120, 144 FPS o desbloqueado.
 
 ---
